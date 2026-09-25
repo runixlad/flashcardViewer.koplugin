@@ -35,14 +35,14 @@ G_reader_settings:readSetting("flashcard_background", false)
 G_reader_settings:readSetting("flashcard_background_path", IMAGE_PATH)
 
 -- REALLY IMPORTANT LEGACY LUA FUNCTIONS
--- This shit is older than this plugin for the most part
+-- This shit is older that this plugin for the most part
 
 function addFlashcard(front2, back2, box2)
     box = box2 or "1"
     tabla = {front = front2, back = back2, box = box}
     local flashcard, headers = ftcsv.parse(DATA_PATH)
     table.insert(flashcard, tabla)
-    save(flashcard, DATA_PATH)
+    guardar(flashcard, DATA_PATH)
 end
 
 function importCards()
@@ -74,7 +74,7 @@ else
 end
 end
 
-function save(tabla, archivo)
+function guardar(tabla, archivo)
     local fileOutput = ftcsv.encode(tabla)
     local file = assert(io.open(archivo, "w"))
     file:write(fileOutput)
@@ -86,7 +86,7 @@ function addFlashcard(front2, back2, box2)
     tabla = {front = front2, back = back2, box = box2}
     local flashcard, headers = ftcsv.parse(DATA_PATH)
     table.insert(flashcard, tabla)
-    save(flashcard, DATA_PATH)
+    guardar(flashcard, DATA_PATH)
 end
 
 function countSilent(file)
@@ -151,6 +151,42 @@ function writeDay(day)
     local file = assert(io.open("day.txt", "w"))
     file:write(dayMath)
     file:close()
+end
+
+-- BACKGROUND specific functions
+
+function mysplit(inputstr, sep)
+  if sep == nil then
+    sep = "%s"
+  end
+  local t = {}
+  for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+    table.insert(t, str)
+  end
+  return t
+end
+
+function know_background_last_path(path2file)
+    local interpath = mysplit(path2file, "/")
+
+    local path_subfolder_number = 0
+
+    for i = 1, #interpath do
+        --print(interpath[i])
+        path_subfolder_number = path_subfolder_number + 1
+    end
+
+    local last_path = ""
+
+    for i = 1, #interpath do
+        if i == path_subfolder_number then
+            last_path = last_path
+        else
+            last_path = last_path .. "/" .. interpath[i]
+        end
+    end
+
+    return last_path
 end
 
 -- START of KOREADER-specific FUNCTIONS
@@ -229,11 +265,14 @@ function FlashcardViewer:addToMainMenu(menu_items)
             {
                 text = _("Choose background"),
                 callback = function()
+                    --G_reader_settings:readSetting("flashcard_background_path", IMAGE_PATH)
+                    local last_path = know_background_last_path(IMAGE_PATH)
                     local path_chooser = PathChooser:new{
                         select_directory = false,
+                        path = last_path,
                         onConfirm = function(file_path)
-                        IMAGE_PATH = file_path
-                        G_reader_settings:saveSetting("flashcard_background_path", file_path)
+                            IMAGE_PATH = file_path
+                            G_reader_settings:saveSetting("flashcard_background_path", file_path)
                         end,
                     }
                     UIManager:show(path_chooser)
@@ -421,11 +460,11 @@ function FlashcardViewer:study(caja)
                                 box2 = flashcard[key].box
                                 keyToDelete = key
                                 table.remove(flashcard, tonumber(keyToDelete))
-                                save(flashcard, DATA_PATH)
+                                guardar(flashcard, DATA_PATH)
                                 --logger.info(front2)
                                 tabla = {front = front2, back = back2, box = "1"}
                                 table.insert(flashcard, tabla)
-                                save(flashcard, DATA_PATH)
+                                guardar(flashcard, DATA_PATH)
                                 key = nextOneOnTheBox(caja,key-1)
                                 if key > 0 then
                                     button_dialog2:setTitle(_("box " .. flashcard[key].box .. " • " .. remaining.." cards left".."\n\n" .. flashcard[key].front.."\n"))
@@ -446,11 +485,11 @@ function FlashcardViewer:study(caja)
                                 --logger.info(box2)
                                 keyToDelete = key
                                 table.remove(flashcard, tonumber(keyToDelete))
-                                save(flashcard, DATA_PATH)
+                                guardar(flashcard, DATA_PATH)
                                 --logger.info(front2)
                                 tabla = {front = front2, back = back2, box = "1"}
                                 table.insert(flashcard, tabla)
-                                save(flashcard, DATA_PATH)
+                                guardar(flashcard, DATA_PATH)
                                 remaining = remaining - 1
                                 key = nextOneOnTheBox(caja,key-1)
                                 if key > 0 then
@@ -472,7 +511,7 @@ function FlashcardViewer:study(caja)
                         UIManager:close(back_dialog)
                         boxNew = tostring(tonumber(flashcard[key].box) + 1)
                         flashcard[key].box = boxNew
-                        save(flashcard, DATA_PATH)
+                        guardar(flashcard, DATA_PATH)
                         key = nextOneOnTheBox(caja,key)
                         remaining = remaining - 1
                         if key > 0 then
@@ -510,7 +549,7 @@ function FlashcardViewer:study(caja)
                             ok_text = _("Remove"),
                             ok_callback = function()
                                 table.remove(flashcard, tonumber(keyToDelete))
-                                save(flashcard, DATA_PATH)
+                                guardar(flashcard, DATA_PATH)
                                 remaining = remaining - 1
                                 key = nextOneOnTheBox(caja,key)
                                 UIManager:close(back_dialog)
@@ -911,7 +950,7 @@ function FlashcardViewer:editScreen(front)
                     table.remove(flashcard, tonumber(editingKey))
                     --flashcard[editingKey].front = fields[1]
                     --flashcard[editingKey].back = fields[2]
-                    save(flashcard, DATA_PATH)
+                    guardar(flashcard, DATA_PATH)
                     addFlashcard(fields[1],fields[2],boxEdit)
                     local popup = InfoMessage:new({
                         text = _(fields[1] .. "\n" .. fields[2]),
@@ -976,7 +1015,7 @@ function FlashcardViewer:editScreenWhileStudying(front, boxToGoBack)
                     table.remove(flashcard, tonumber(editingKey))
                     --flashcard[editingKey].front = fields[1]
                     --flashcard[editingKey].back = fields[2]
-                    save(flashcard, DATA_PATH)
+                    guardar(flashcard, DATA_PATH)
                     addFlashcard(fields[1],fields[2],boxEdit)
                     FlashcardViewer:study(boxToGoBack)
                     local popup = InfoMessage:new({
